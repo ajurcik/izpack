@@ -12,8 +12,8 @@ install:
 addons:
   apt:
     packages:
-      - openjdk-6-jdk
-      - openjdk-7-jdk
+#      - openjdk-6-jdk
+#      - openjdk-7-jdk
       - fluxbox
 
 cache:
@@ -28,10 +28,10 @@ before_script:
   - sleep 3
 
 jdk:
-  - openjdk6
-  - openjdk7
-  - openjdk8
-  - oraclejdk8
+#  - openjdk6
+#  - openjdk7
+#  - openjdk8
+#  - oraclejdk8
   - oraclejdk9
 
 env:
