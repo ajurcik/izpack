@@ -19,6 +19,7 @@ addons:
 cache:
  directories:
    - $HOME/.m2/repository
+   - $HOME/mvn-home
 
 before_script:
   - export DISPLAY=:99.0
@@ -31,10 +32,12 @@ jdk:
   - openjdk7
   - openjdk8
   - oraclejdk8
+  - oraclejdk9
 
 env:
   global:
     - JAVA_OPTS="-Djava.awt.headless=false"
+    - MAVEN_OPTS="-XX:+IgnoreUnrecognizedVMOptions --add-modules java.xml.bind"
 
 script:
   - mvn -U clean verify
