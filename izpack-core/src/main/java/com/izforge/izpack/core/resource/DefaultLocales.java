@@ -23,6 +23,7 @@ package com.izforge.izpack.core.resource;
 
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -97,7 +98,6 @@ public class DefaultLocales implements Locales
      * @param resources the resources
      * @throws ResourceException if the locales can't be determined
      */
-    @SuppressWarnings("unchecked")
     public DefaultLocales(Resources resources)
     {
         this(resources, Locale.getDefault());
@@ -161,6 +161,7 @@ public class DefaultLocales implements Locales
      *
      * @return the current locale. May be {@code null}
      */
+    @Override
     public Locale getLocale()
     {
         return locale;
@@ -286,7 +287,9 @@ public class DefaultLocales implements Locales
     {
         Map<String, Locale> available = new HashMap<String, Locale>();
         addLocale(available, defaultLocale);
-        for (Locale locale : Locale.getAvailableLocales())
+        Locale[] availableLocales = Locale.getAvailableLocales();
+        Arrays.sort(availableLocales, new LocaleSorter());
+        for (Locale locale : availableLocales)
         {
             addLocale(available, locale, defaultLocale);
         }
@@ -316,17 +319,24 @@ public class DefaultLocales implements Locales
      */
     private void addLocale(Map<String, Locale> locales, Locale locale, Locale defaultLocale)
     {
+        if (!locale.getVariant().isEmpty()) {
+            return;
+        }
         String language = locale.getLanguage();
+        // only take 2 letter language do not interfere with the ISO3 country
+        if (language.length() != 2) {
+            return;
+        }
         String country = locale.getCountry();
         Locale existing = locales.get(language);
 
         // add mapping for language codes, if:
         // * no mapping exists for the 2 character code;  or
         // * a mapping exists that isn't the default locale and has a country, and the new mapping has no country
-        if (existing == null || (existing != defaultLocale && !"".equals(existing.getCountry()) && "".equals(country)))
+        if (existing == null || (!existing.equals(defaultLocale) && !"".equals(existing.getCountry()) && country.isEmpty()))
         {
             // use locales not associated with a particular country by preference, unless its the default locale
-            if (!"".equals(language))
+            if (!language.isEmpty())
             {
                 locales.put(language, locale);
             }
@@ -338,7 +348,7 @@ public class DefaultLocales implements Locales
         }
 
         // add mapping for 2 character country code
-        if (!"".equals(country))
+        if (!country.isEmpty())
         {
             locales.put(country, locale);
         }
@@ -365,7 +375,7 @@ public class DefaultLocales implements Locales
         }
         else
         {
-		    		Messages parentMessages = messages;
+            Messages parentMessages = messages;
             messages = null;
             locale = findByCountry(code);
             if (locale == null)

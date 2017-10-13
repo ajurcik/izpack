@@ -78,6 +78,7 @@ public class DefaultLocalesTest
         List<Locale> available = locales.getLocales();
         assertEquals(2, available.size());
         assertEquals("eng", available.get(0).getISO3Language());
+        System.out.println(available.get(1) + " " + available.get(1).getDisplayName());
         assertEquals("fra", available.get(1).getISO3Language());
     }
 
