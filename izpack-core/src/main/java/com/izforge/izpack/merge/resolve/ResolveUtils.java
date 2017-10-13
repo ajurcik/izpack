@@ -21,14 +21,8 @@ package com.izforge.izpack.merge.resolve;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.JarURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.URLClassLoader;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.zip.ZipFile;
@@ -111,31 +105,7 @@ public class ResolveUtils
 
     public static String getCurrentClasspath()
     {
-        StringBuilder stringBuilder = new StringBuilder();
-        for (URL url : getClassPathUrl())
-        {
-            stringBuilder.append(FileUtil.convertUrlToFilePath(url));
-            stringBuilder.append('\n');
-        }
-        return stringBuilder.toString();
-    }
-
-    static Collection<URL> getClassPathUrl()
-    {
-        Collection<URL> result = new HashSet<URL>();
-        java.net.URLClassLoader loader = (URLClassLoader) Thread.currentThread().getContextClassLoader();
-        result.addAll(Arrays.asList(loader.getURLs()));
-        try
-        {
-            Enumeration<URL> urlEnumeration = loader.getResources("");
-            result.addAll(Collections.list(urlEnumeration));
-            urlEnumeration = loader.getResources("META-INF/");
-            result.addAll(Collections.list(urlEnumeration));
-        }
-        catch (IOException ignored)
-        {
-        }
-        return result;
+        return System.getProperty("java.class.path").replace(File.pathSeparatorChar, '\n');
     }
 
     /**
@@ -169,21 +139,21 @@ public class ResolveUtils
 
     public static Set<URL> getJarUrlForPackage(String packageName)
     {
-        URLClassLoader loader = (URLClassLoader) Thread.currentThread().getContextClassLoader();
+//        URLClassLoader loader = (URLClassLoader) Thread.currentThread().getContextClassLoader();
         Set<URL> result = new HashSet<URL>();
-        try
-        {
-            Enumeration<URL> urls = loader.getResources(packageName);
-            while (urls.hasMoreElements())
-            {
-                URL url = urls.nextElement();
-                JarURLConnection connection = (JarURLConnection) url.openConnection();
-                result.add(connection.getJarFileURL());
-            }
-        }
-        catch (IOException ioex)
-        {
-        }
+//        try
+//        {
+//            Enumeration<URL> urls = loader.getResources(packageName);
+//            while (urls.hasMoreElements())
+//            {
+//                URL url = urls.nextElement();
+//                JarURLConnection connection = (JarURLConnection) url.openConnection();
+//                result.add(connection.getJarFileURL());
+//            }
+//        }
+//        catch (IOException ioex)
+//        {
+//        }
         return result;
     }
 

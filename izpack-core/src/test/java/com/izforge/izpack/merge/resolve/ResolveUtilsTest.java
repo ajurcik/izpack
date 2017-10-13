@@ -21,6 +21,8 @@ package com.izforge.izpack.merge.resolve;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
+import static org.hamcrest.core.IsNot.not;
+import static org.hamcrest.core.IsNull.nullValue;
 
 import java.net.URL;
 
@@ -36,7 +38,7 @@ public class ResolveUtilsTest {
     {
         assertThat(ResolveUtils.convertPathToPosixPath("C:\\Users\\gaou\\.m2") , is("C:/Users/gaou/.m2"));
     }
-    
+
     @Test
     public void testIsFileInJar() throws Exception
     {
@@ -46,5 +48,17 @@ public class ResolveUtilsTest {
         
         resource = new URL(container.toString() + "!/jar/izforge/izpack/panels/hello/");
         assertThat(ResolveUtils.isFileInJar(resource), is(false));
+    }
+
+    @Test
+    public void testGetCurrentClasspath()
+    {
+        assertThat(ResolveUtils.getCurrentClasspath(), not(nullValue()));
+    }
+
+    @Test
+    public void testGetJarUrlForPackage()
+    {
+        assertThat(ResolveUtils.getJarUrlForPackage("com/izforge/izpack/merge/resolve"), not(nullValue()));
     }
 }
