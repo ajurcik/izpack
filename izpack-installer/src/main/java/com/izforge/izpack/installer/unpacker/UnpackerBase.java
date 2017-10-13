@@ -51,7 +51,6 @@ import org.apache.commons.io.IOUtils;
 
 import java.io.*;
 import java.net.URL;
-import java.net.URLClassLoader;
 import java.util.*;
 import java.util.jar.Attributes;
 import java.util.jar.Manifest;
@@ -250,15 +249,17 @@ public abstract class UnpackerBase implements IUnpacker
         logger.info(new String(chars));
         logger.info(startMessage);
 
-        URLClassLoader cl = (URLClassLoader) getClass().getClassLoader();
         InputStream is = null;
         try
         {
-            URL url = cl.findResource("META-INF/MANIFEST.MF");
-            is = url.openStream();
-            Manifest manifest = new Manifest(is);
-            Attributes attr = manifest.getMainAttributes();
-            logger.info(messages.get("installer.version", attr.getValue("Created-By")));
+            URL url = getClass().getClassLoader().getResource("META-INF/MANIFEST.MF");
+            if (url != null)
+            {
+                is = url.openStream();
+                Manifest manifest = new Manifest(is);
+                Attributes attr = manifest.getMainAttributes();
+                logger.info(messages.get("installer.version", attr.getValue("Created-By")));
+            }
         }
         catch (IOException e)
         {
@@ -365,6 +366,7 @@ public abstract class UnpackerBase implements IUnpacker
      *
      * @return true if the operation was successful, false otherwise.
      */
+    @Override
     public boolean getResult()
     {
         return result;
@@ -431,6 +433,7 @@ public abstract class UnpackerBase implements IUnpacker
      *
      * @return <tt>true</tt> if interrupts have been disabled, otherwise <tt>false</tt>
      */
+    @Override
     public synchronized boolean isInterruptDisabled()
     {
         return disableInterrupt;
@@ -1175,13 +1178,17 @@ public abstract class UnpackerBase implements IUnpacker
             logger.fine("Previous installation information found");
             // read in old information and update
             FileInputStream fin = new FileInputStream(installationInfo);
-            ObjectInputStream oin = new ObjectInputStream(fin);
-
-            List<Pack> packs;
+            ObjectInputStream oin = null;
             try
             {
+                oin = new ObjectInputStream(fin);
                 //noinspection unchecked
-                packs = (List<Pack>) oin.readObject();
+                @SuppressWarnings("unchecked")
+                List<Pack> packs = (List<Pack>) oin.readObject();
+                if (packs != null)
+                {
+                    installedPacks.addAll(packs);
+                }
             }
             catch (Exception exception)
             {
@@ -1192,17 +1199,23 @@ public abstract class UnpackerBase implements IUnpacker
                 IOUtils.closeQuietly(oin);
                 IOUtils.closeQuietly(fin);
             }
-            installedPacks.addAll(packs);
         }
 
         FileOutputStream fout = new FileOutputStream(installationInfo);
-        ObjectOutputStream oout = new ObjectOutputStream(fout);
-        oout.writeObject(installedPacks);
-        oout.writeObject(variables.getProperties());
-
-        logger.fine("Writing installation information finished");
-        IOUtils.closeQuietly(oout);
-        IOUtils.closeQuietly(fout);
+        ObjectOutputStream oout = null;
+        try
+        {
+            oout = new ObjectOutputStream(fout);
+            oout.writeObject(installedPacks);
+            oout.writeObject(variables.getProperties());
+            
+            logger.fine("Writing installation information finished");
+        }
+        finally
+        {
+            IOUtils.closeQuietly(oout);
+            IOUtils.closeQuietly(fout);
+        }
 
         uninstallData.addFile(installationInfo.getAbsolutePath(), true);
     }
