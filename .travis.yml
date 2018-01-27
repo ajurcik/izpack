@@ -36,20 +36,20 @@ matrix:
           packages:
             - openjdk-6-jdk
       jdk: openjdk6
-        env: MVN_VERSION="3.2.5"
+      env: MVN_VERSION="3.2.5"
     - addons:
         apt:
           packages:
             - fluxbox
             - openjdk-7-jdk
       jdk: openjdk7
-        env: MVN_VERSION="3.3.9"
+      env: MVN_VERSION="3.3.9"
     - jdk: oraclejdk8
-        env: MVN_VERSION="3.3.9"
-#    - jdk: oraclejdk9
-#        env:
-#          - MVN_VERSION="3.3.9"
-#          - MAVEN_OPTS="-XX:+IgnoreUnrecognizedVMOptions --add-modules java.xml.bind"
+      env: MVN_VERSION="3.3.9"
+    - jdk: oraclejdk9
+      env:
+        - MVN_VERSION="3.3.9"
+        - MAVEN_OPTS="-XX:+IgnoreUnrecognizedVMOptions --add-modules java.xml.bind"
 
 env:
   global:
