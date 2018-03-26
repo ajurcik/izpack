@@ -223,13 +223,14 @@ public class CompilerConfig extends Thread
     private static final String DEFAULT_TEMP_DIR_SUFFIX = "Install";
     private static final String TEMP_DIR_VARIABLE_NAME_ATTRIBUTE = "variablename";
     private static final String TEMP_DIR_DEFAULT_PROPERTY_NAME = "TEMP_DIRECTORY";
+    private static final String ISO3_ATTRIBUTE = "iso3";
+    private static final String SRC_ATTRIBUTE = "src";
+    private static final String DIR_ATTRIBUTE = "dir";
 
     /**
      * Help information.
      */
-    private final static String HELP_TAG = "help";
-    private static final String ISO3_ATTRIBUTE = "iso3";
-    private final static String SRC_ATTRIBUTE = "src";
+    private static final String HELP_TAG = "help";
 
     /**
      * Constructor
@@ -577,7 +578,7 @@ public class CompilerConfig extends Thread
         final boolean javaVersionStrict = compilerData.getExternalInfo().getJavaVersionStrict();
         for (IXMLElement ixmlElement : data.getChildrenNamed("jar"))
         {
-            String src = xmlCompilerHelper.requireAttribute(ixmlElement, "src");
+            String src = getSrcSubstitutedAttributeValue(ixmlElement);
 
             // all external jars contents regardless of stage type are merged into the installer
             // but we keep a copy of jar entries that user want to merge into uninstaller
@@ -718,7 +719,7 @@ public class CompilerConfig extends Thread
         {
             String type = xmlCompilerHelper.requireAttribute(ixmlElement, "type");
             String name = xmlCompilerHelper.requireAttribute(ixmlElement, "name");
-            String path = ixmlElement.getAttribute("src");
+            String path = ixmlElement.getAttribute(SRC_ATTRIBUTE);
             if (path == null)
             {
                 path = NATIVES_PATH + type + "/" + name;
@@ -935,7 +936,7 @@ public class CompilerConfig extends Thread
         {
 
             // the directory to scan
-            String dir_attr = xmlCompilerHelper.requireAttribute(refPackSet, "dir");
+            String dir_attr = xmlCompilerHelper.requireAttribute(refPackSet, DIR_ATTRIBUTE);
 
             File dir = new File(dir_attr);
             if (!dir.isAbsolute())
@@ -1014,7 +1015,7 @@ public class CompilerConfig extends Thread
         {
             for (TargetFileSet fs : readFileSets(packElement, baseDir))
             {
-                processFileSetChildren(fs, baseDir, pack);
+                processFileSetChildren(fs, baseDir, null, pack);
             }
         }
         catch (Exception e)
@@ -1023,7 +1024,7 @@ public class CompilerConfig extends Thread
         }
     }
 
-    private void processFileSetChildren(TargetFileSet fs, File baseDir, PackInfo pack) throws Exception
+    private void processFileSetChildren(TargetFileSet fs, File baseDir, List<OsModel> parentOsList, PackInfo pack) throws Exception
     {
         String[][] includedFilesAndDirs = new String[][]{
                 fs.getDirectoryScanner().getIncludedDirectories(),
@@ -1039,8 +1040,24 @@ public class CompilerConfig extends Thread
                     {
                         File file = new File(fs.getDir(), filePath);
                         String target = new File(fs.getTargetDir(), filePath).getPath();
+                        List<OsModel> osList = fs.getOsList();
+                        
+                        if (parentOsList != null && !parentOsList.isEmpty())
+                        {
+                            // get list of OS constraints safisfiying both parent's and fs's
+                            try
+                            {
+                                osList = OsConstraintHelper.commonOsList(parentOsList, fs.getOsList());
+                                logCombineOsLists(parentOsList, fs.getOsList(), osList);
+                            }
+                            catch (OsConstraintHelper.UnsatisfiableOsConstraintsException ex)
+                            {
+                                throw new CompilerException(ex.getMessage());
+                            }
+                        }
+                        
                         logAddingFile(file.toString(), target);
-                        pack.addFile(baseDir, file, target, fs.getOsList(),
+                        pack.addFile(baseDir, file, target, osList,
                                      fs.getOverride(), fs.getOverrideRenameTo(),
                                      fs.getBlockable(), fs.getAdditionals(), fs.getCondition(), fs.getPack200Properties());
                     }
@@ -1084,7 +1101,7 @@ public class CompilerConfig extends Thread
     {
         for (IXMLElement singleFileNode : packElement.getChildrenNamed("singlefile"))
         {
-            String src = xmlCompilerHelper.requireAttribute(singleFileNode, "src");
+            String src = getSrcSubstitutedAttributeValue(singleFileNode);
             String target = xmlCompilerHelper.requireAttribute(singleFileNode, "target");
             List<OsModel> osList = OsConstraintHelper.getOsList(singleFileNode); // TODO: unverified
             OverrideType override = getOverrideValue(singleFileNode);
@@ -1092,23 +1109,16 @@ public class CompilerConfig extends Thread
             Blockable blockable = getBlockableValue(singleFileNode, osList);
             Map<String, ?> additionals = getAdditionals(singleFileNode);
             String conditionId = parseConditionAttribute(singleFileNode);
+           
             File file = new File(src);
             if (!file.isAbsolute())
             {
                 file = new File(baseDir, src);
             }
 
-            // if the path does not exist, maybe it contains variables
             if (!file.exists())
             {
-                try
-                {
-                    file = new File(variableSubstitutor.substitute(file.getAbsolutePath()));
-                }
-                catch (Exception e)
-                {
-                    assertionHelper.parseWarn(singleFileNode, e.getMessage());
-                }
+                assertionHelper.parseWarn(singleFileNode, "Source file " + src + " (" + file + ") not found");
                 // next existance checking appears in pack.addFile
             }
 
@@ -1129,7 +1139,7 @@ public class CompilerConfig extends Thread
     {
         for (IXMLElement fileNode : packElement.getChildrenNamed("file"))
         {
-            String src = xmlCompilerHelper.requireAttribute(fileNode, "src");
+            String src = getSrcSubstitutedAttributeValue(fileNode);
             boolean unpack = Boolean.parseBoolean(fileNode.getAttribute("unpack"));
 
             TargetFileSet fs = new TargetFileSet();
@@ -1137,11 +1147,6 @@ public class CompilerConfig extends Thread
             {
                 File relsrcfile = new File(src);
                 File abssrcfile = FileUtil.getAbsoluteFile(src, baseDir.getAbsolutePath());
-                // if the path does not exist, maybe it contains variables
-                if (!abssrcfile.exists())
-                {
-                    abssrcfile = new File(variableSubstitutor.substitute(abssrcfile.getAbsolutePath()));
-                }
                 if (!abssrcfile.exists())
                 {
                     throw new FileNotFoundException("Source file " + relsrcfile + " (" + abssrcfile + ") not found");
@@ -1688,7 +1693,7 @@ public class CompilerConfig extends Thread
             {
                 for (IXMLElement fileSetNode : filesetNodes)
                 {
-                    processFileSetChildren(readArchiveFileSet(fileSetNode, baseTempDir, targetDir), baseTempDir, pack);
+                    processFileSetChildren(readArchiveFileSet(fileSetNode, baseTempDir, targetDir), baseTempDir, osList, pack);
                 }
             }
         }
@@ -2038,7 +2043,7 @@ public class CompilerConfig extends Thread
         for (IXMLElement resNode : root.getChildrenNamed("res"))
         {
             String id = xmlCompilerHelper.requireAttribute(resNode, "id");
-            String src = xmlCompilerHelper.requireAttribute(resNode, "src");
+            String src = xmlCompilerHelper.requireAttribute(resNode, SRC_ATTRIBUTE);
             // the parse attribute causes substitution to occur
             boolean substitute = xmlCompilerHelper.validateYesNoAttribute(resNode, "parse", NO);
             // the parsexml attribute causes the xml document to be parsed
@@ -2961,7 +2966,7 @@ public class CompilerConfig extends Thread
             {
                 if (dynamicVariable.getValue() == null)
                 {
-                    String dir = var.getAttribute("dir");
+                    String dir = var.getAttribute(DIR_ATTRIBUTE);
                     String exectype = var.getAttribute("type");
                     String boolval = var.getAttribute("stderr");
                     boolean stderr = true;
@@ -3712,27 +3717,24 @@ public class CompilerConfig extends Thread
 
     private TargetFileSet readFileSet(IXMLElement fileSetNode, File baseDir) throws CompilerException
     {
-        String dir_attr = xmlCompilerHelper.requireAttribute(fileSetNode, "dir");
+        String dir_attr = getDirSubstitutedAttributeValue(fileSetNode);
+        File extractedBaseDir = baseDir;
         if (dir_attr != null)
         {
-            baseDir = FileUtil.getAbsoluteFile(dir_attr, baseDir.getAbsolutePath());
-            // if the path does not exist, maybe it contains variables
-            if (!baseDir.exists()) {
-                baseDir = new File(variableSubstitutor.substitute(baseDir.getAbsolutePath()));
-            }
+            extractedBaseDir = FileUtil.getAbsoluteFile(dir_attr, baseDir.getAbsolutePath());
         }
         String targetDir = fileSetNode.getAttribute("targetdir", "${INSTALL_PATH}");
 
-        return readFileSet(fileSetNode, baseDir, targetDir);
+        return readFileSet(fileSetNode, extractedBaseDir, targetDir);
     }
 
     private TargetFileSet readArchiveFileSet(IXMLElement fileSetNode, File baseDir, String targetDir) throws CompilerException
     {
-        String dir_attr = fileSetNode.getAttribute("dir");
+        String dir_attr = getDirSubstitutedAttributeValue(fileSetNode);
         File extractedBaseDir = baseDir;
         if (dir_attr != null)
         {
-            extractedBaseDir = new File(baseDir, variableSubstitutor.substitute(dir_attr));
+            extractedBaseDir = new File(baseDir, dir_attr);
             if (!extractedBaseDir.exists()) {
                 assertionHelper.parseError(fileSetNode, "Archive does not contain a base directory " + dir_attr);
             }
@@ -3909,6 +3911,41 @@ public class CompilerConfig extends Thread
             }
         }
     }
+    
+    /**
+     * Retrieves the substituted value of the given node's "src" attribute.
+     * 
+     * @param node the node you want the "src" attribute value from
+     * @return the substituted value of node's "src" attribute
+     */
+    private String getSrcSubstitutedAttributeValue(IXMLElement node)
+    {
+        return getSubstitutedAttributeValue(node, SRC_ATTRIBUTE);
+    }
+
+    /**
+     * Retrieves the substituted value of the given node's "dir" attribute.
+     * 
+     * @param node the node you want the "dir" attribute value from
+     * @return the substituted value of node's "dir" attribute
+     */
+    private String getDirSubstitutedAttributeValue(IXMLElement node)
+    {
+        return getSubstitutedAttributeValue(node, DIR_ATTRIBUTE);
+    }
+    
+    /**
+     * Retrieves the substituted value of the given node's attribute.
+     * 
+     * @param node the XML node you want the attribute value from
+     * @param attribute the attribute you want the value from
+     * @return the substituted value
+     */
+    private String getSubstitutedAttributeValue(IXMLElement node, String attribute)
+    {
+        String attributeValue = xmlCompilerHelper.requireAttribute(node, attribute);
+        return variableSubstitutor.substitute(attributeValue);
+    }
 
     // Logging helper methods
 
@@ -3934,5 +3971,16 @@ public class CompilerConfig extends Thread
     {
         logger.log(Level.INFO, "Adding pack {0} containing {1} files",
                 new String[]{packInfo.getPack().getName(), Integer.toString(packInfo.getPackFiles().size())});
+    }
+    
+    private void logCombineOsLists(List<OsModel> parentOsList, List<OsModel> osList, List<OsModel> commonOsList)
+    {
+        logger.log(Level.INFO, "Combined parent''s OS constraints:\n\t{0}\nwith node''s:\n\t{1}\ninto:\n\t{2}",
+                new String[]{
+                    OsConstraintHelper.toOsContraintsString(parentOsList),
+                    OsConstraintHelper.toOsContraintsString(osList),
+                    OsConstraintHelper.toOsContraintsString(commonOsList)
+                }
+        );
     }
 }

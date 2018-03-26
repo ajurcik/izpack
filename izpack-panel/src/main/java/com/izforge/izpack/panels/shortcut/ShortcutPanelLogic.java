@@ -92,6 +92,11 @@ public class ShortcutPanelLogic implements CleanupClient
     private boolean skipIfNotSupported = false;
 
     /**
+     * Tells whether to disable previous nav button
+     */
+    private boolean previousDisabled = false;
+
+    /**
      * the one shortcut instance for reuse in many locations
      */
     private Shortcut shortcut;
@@ -130,9 +135,13 @@ public class ShortcutPanelLogic implements CleanupClient
      * If true it indicates that there are shortcuts to create. The value is set by
      * createShortcutData()
      */
-    private boolean createMenuShortcuts = false;
-
     private boolean createShortcuts = false;
+
+    private boolean createMenuShortcuts = false;
+    
+    private boolean createDesktopShortcuts = false;
+
+    private boolean createStartupShortcuts = false;
 
     /**
      * This is set to true if the shortcut spec instructs to simulate running on an operating system
@@ -149,10 +158,6 @@ public class ShortcutPanelLogic implements CleanupClient
     private final UninstallData uninstallData;
 
     private final PlatformModelMatcher matcher;
-
-    private boolean createDesktopShortcuts;
-
-    private boolean createStartupShortcuts;
 
     private boolean defaultCurrentUserFlag = false;
 
@@ -453,6 +458,14 @@ public class ShortcutPanelLogic implements CleanupClient
     public boolean skipIfNotSupported()
     {
         return skipIfNotSupported;
+    }
+
+    /**
+     * @return <code>true</code> if previous nav button is disabled otherwise <code>false</code>
+     */
+    public boolean isPreviousDisabled()
+    {
+        return previousDisabled;
     }
 
     /**
@@ -786,6 +799,7 @@ public class ShortcutPanelLogic implements CleanupClient
         simulateNotSupported = (spec.getFirstChildNamed(SPEC_KEY_NOT_SUPPORTED) != null);
         defaultCurrentUserFlag = (spec.getFirstChildNamed(SPEC_KEY_DEF_CUR_USER) != null);
         skipIfNotSupported = (spec.getFirstChildNamed(SPEC_KEY_SKIP_IFNOT_SUPPORTED) != null);
+        previousDisabled = (spec.getFirstChildNamed(SPEC_KEY_PREVIOUS_DISABLED) != null);
         setCreateShortcutsImmediately(spec.getFirstChildNamed(SPEC_KEY_LATE_INSTALL) == null);
 
 
@@ -1186,7 +1200,11 @@ public class ShortcutPanelLogic implements CleanupClient
         {
             writeXDGMenuFile(startMenuShortcuts, this.groupName, programGroupIconFile, programGroupComment);
         }
-        shortcut.execPostAction();
+        
+        if (!shortcuts.isEmpty()) 
+        {
+            shortcut.execPostAction();
+        }
 
         try
         {
