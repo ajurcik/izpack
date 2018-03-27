@@ -30,33 +30,16 @@ matrix:
           packages:
             - fluxbox
             - openjdk-6-jdk
-    - jdk: openjdk6
-      env:
-        - JDK="OpenJDK 6"
-        - MVN_VERSION="3.2.5"
+      jdk: openjdk6
+      env: MVN_VERSION="3.2.5"
     - jdk: openjdk7
-      env:
-        - JDK="OpenJDK 7"
-        - MVN_VERSION="3.2.5"
+      env: MVN_VERSION="3.3.9"
     - jdk: oraclejdk8
-      env:
-        - JDK="Oracle JDK 8"
-        - MVN_VERSION="3.2.5"
+      env: MVN_VERSION="3.3.9"
     - jdk: oraclejdk9
       env:
-        - JDK="Oracle JDK 9"
         - MVN_VERSION="3.5.2"
-        - MAVEN_OPTS="--illegal-access=warn --add-modules java.xml.bind"
-    - jdk: openjdk9
-      env:
-        - JDK="OpenJDK 9"
-        - MVN_VERSION="3.5.2"
-        - MAVEN_OPTS="--illegal-access=warn --add-modules java.xml.bind"
-    - jdk: openjdk10
-      env:
-        - JDK="OpenJDK 10"
-        - MVN_VERSION="3.5.2"
-        - MAVEN_OPTS="--illegal-access=warn --add-modules java.xml.bind"
+        - MAVEN_OPTS="--add-modules java.xml.bind"
 
 env:
   global:
