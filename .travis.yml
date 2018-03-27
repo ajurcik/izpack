@@ -46,8 +46,8 @@ env:
     - JAVA_OPTS="-Djava.awt.headless=false"
 
 script:
-  - mvn -U clean verify
-  - mvn verify -Pwith-gui-tests
+  - mvn -X -U clean verify
+  - mvn -X verify -Pwith-gui-tests
 
 notifications:
   email: false
