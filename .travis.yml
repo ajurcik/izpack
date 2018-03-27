@@ -40,6 +40,14 @@ matrix:
       env:
         - MVN_VERSION="3.5.2"
         - MAVEN_OPTS="--add-modules java.xml.bind"
+    - jdk: openjdk9
+      env:
+        - MVN_VERSION="3.5.2"
+        - MAVEN_OPTS="--add-modules java.xml.bind"
+    - jdk: openjdk10
+      env:
+        - MVN_VERSION="3.5.2"
+        - MAVEN_OPTS="--add-modules java.xml.bind"
 
 env:
   global:
