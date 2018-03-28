@@ -393,7 +393,8 @@ public class TreePacksPanel extends IzPanel
      */
     private void syncCheckboxesWithModel(CheckBoxNode rootNode)
     {
-        Enumeration<CheckBoxNode> e = rootNode.children();
+        @SuppressWarnings("unchecked")
+        Enumeration<CheckBoxNode> e = (Enumeration<CheckBoxNode>) (Enumeration<?>) rootNode.children();
         while (e.hasMoreElements())
         {
             CheckBoxNode node = e.nextElement();
